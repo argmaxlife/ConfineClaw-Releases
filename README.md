@@ -1,8 +1,10 @@
 # ConfineClaw-Releases
 
-Release artifacts and operational notes for ConfineClaw.
+ConfineClaw provides a simple, secure, and ready-to-run execution environment, built on top of OpenClaw. Each release is packaged as a prebuilt .run installer that can be downloaded and executed directly, without requiring npm, Docker, or any additional runtime setup.
 
-## Configure OpenClaw
+Designed for reliability and safety, ConfineClaw runs in a tightly controlled environment, making it highly resistant to unintended modifications such as code or data being deleted or altered during execution. It enables users to deploy and use powerful capabilities immediately, with minimal setup and strong isolation guarantees, while extending and hardening the OpenClaw runtime for real-world usage.
+
+## Setup
 
 ### Models
 
@@ -201,6 +203,7 @@ sudo umount /tmp/rootfs
 
 The soul of OpenClaw is stored under `/root/openclaw`. When upgrading the body, you can transfer the soul from the old body to the new body and continue its life.
 ```bash
+mkdir /tmp/rootfs_prev /tmp/rootfs
 mount /path/to/old/rootfs.ext4 /tmp/rootfs_prev
 mount /path/to/new/rootfs.ext4 /tmp/rootfs
 sudo rsync -av /tmp/rootfs_prev/root/openclaw/ /tmp/rootfs/root/openclaw/
