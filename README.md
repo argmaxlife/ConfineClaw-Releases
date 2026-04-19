@@ -1,213 +1,128 @@
 # ConfineClaw-Releases
 
-ConfineClaw provides a simple, secure, and ready-to-run execution environment, built on top of OpenClaw. Each release is packaged as a prebuilt .run installer that can be downloaded and executed directly, without requiring npm, Docker, or any additional runtime setup.
+**Run OpenClaw safely — inside a Firecracker microVM.**
 
-Designed for reliability and safety, ConfineClaw runs in a tightly controlled environment, making it highly resistant to unintended modifications such as code or data being deleted or altered during execution. It enables users to deploy and use powerful capabilities immediately, with minimal setup and strong isolation guarantees, while extending and hardening the OpenClaw runtime for real-world usage.
+ConfineClaw is a secure, desktop-friendly runtime for OpenClaw, distributed as a prebuilt installer. It removes the need for Docker, npm, or manual setup, and runs everything inside a strongly isolated environment.
 
-## Setup
+---
 
-### Models
+## 🚀 Why ConfineClaw
 
-#### Online Model
+OpenClaw is powerful — but it can execute code, modify files, and interact with your system.
 
-Enter the container:
+ConfineClaw adds a practical safety layer:
+
+* 🔒 **Safer for running untrusted agents** — uses Firecracker microVMs instead of standard container isolation
+* 🧱 **Stronger isolation model** — avoids shared-kernel risks common in typical container setups
+* ⚡ **Zero setup** — no Docker, no npm, no environment preparation
+* 🖱️ **Desktop-first workflow** — launch from a shortcut instead of a complex CLI
+* 📦 **Reproducible releases** — prebuilt, versioned, and consistently generated artifacts
+
+---
+
+## ⚡ Quick Start
+
+1. Download the `.run` installer from Releases
+2. Make it executable and run:
+
 ```bash
-ctr -n default task exec -t --exec-id configure gateway /bin/bash
+chmod +x ConfineClaw-vxxxx.yy.zz.run
+./ConfineClaw-vxxxx.yy.zz.run
 ```
 
-You can also configure the model and API_KEY (obtain it from the provider) without entering the container:
-```bash
-ctr -n default run --rm -t --net-host \
-  --env OPENCLAW_STATE_DIR=/home/node/state \
-  --mount type=bind,src=/root/openclaw/state,dst=/home/node/state,options=rbind:rw \
-  --mount type=bind,src=/root/openclaw/workspace,dst=/home/node/workspace,options=rbind:rw \
-  ghcr.io/openclaw/openclaw:latest init \
-  /bin/sh -c '
-  set -e
-  openclaw config set env.OPENROUTER_API_KEY "API_KEY"
-  openclaw config set agents.defaults.model.primary "openrouter/MODEL_ID"
-  '
+3. Launch ConfineClaw from the desktop shortcut
+4. Enter your `sudo` password when prompted
+5. (First run only) configure disk sizes (`input.ext4` / `output.ext4`) or use defaults
+6. Wait for initialization
+7. Login:
+
+```
+username: root
+password: root
 ```
 
-#### Local Model
+You are now inside a Firecracker VM running OpenClaw in an isolated environment.
 
-##### Ollama
+---
 
-Start the Ollama service:
+## 🔧 Access & Configuration
+
+### 🖥️ Accessing the OpenClaw Environment
+
+After initialization, ConfineClaw runs OpenClaw inside a Firecracker VM.
+
+#### Option 1 (Recommended for advanced users)
+
+Enter the OpenClaw container:
+
 ```bash
-OLLAMA_HOST=0.0.0.0 OLLAMA_KEEP_ALIVE=1h CUDA_VISIBLE_DEVICES=0 ollama serve
+ctr -n default task exec -t --exec-id setup gateway /bin/bash
 ```
 
-Configure the Ollama model:
+---
+
+### 🌐 Accessing the Web UI
+
+The OpenClaw UI runs inside the VM and is not exposed by default.
+
+You can forward the port to your host:
+
 ```bash
-ctr -n default run --rm -t --net-host \
-  --env OPENCLAW_STATE_DIR=/home/node/state \
-  --mount type=bind,src=/root/openclaw/state,dst=/home/node/state,options=rbind:rw \
-  --mount type=bind,src=/root/openclaw/workspace,dst=/home/node/workspace,options=rbind:rw \
-  ghcr.io/openclaw/openclaw:latest init \
-  /bin/sh -c '
-  set -e
-
-  cat <<EOF > /tmp/batch.json
-[
-  {
-    "path": "models.providers.ollama",
-    "value": {
-      "api": "ollama",
-      "apiKey": "ollama-local",
-      "baseUrl": "http://172.20.40.79:11434",
-      "models": [
-        {
-          "id": "gemma4:26b",
-          "name": "GEMMA4 26B",
-          "reasoning": false,
-          "input": ["text"],
-          "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-          "contextWindow": 16384,
-          "maxTokens": 163840
-        }
-      ]
-    }
-  },
-  {
-    "path": "agents.defaults.model.primary",
-    "value": "ollama/gemma4:26b"
-  }
-]
-EOF
-
-  openclaw config set --batch-file /tmp/batch.json
-  '
+ssh -N -L 18789:127.0.0.1:18789 root@172.16.0.2
 ```
 
-##### llama.cpp
+Then open:
 
-Start the llama.cpp service:
-```bash
-CUDA_VISIBLE_DEVICES=0 ./llama-server --model /data3/buffalo/models/unsloth/Qwen3.5-27B-GGUF/Qwen3.5-27B-UD-Q4_K_XL.gguf --host 0.0.0.0 --port 9090 --reasoning off
+```
+http://127.0.0.1:18789
 ```
 
-Configure the llama.cpp model:
-```bash
-ctr -n default run --rm -t --net-host \
-  --env OPENCLAW_STATE_DIR=/home/node/state \
-  --mount type=bind,src=/root/openclaw/state,dst=/home/node/state,options=rbind:rw \
-  --mount type=bind,src=/root/openclaw/workspace,dst=/home/node/workspace,options=rbind:rw \
-  ghcr.io/openclaw/openclaw:latest init \
-  /bin/sh -c '
-  set -e
+---
 
-  cat <<EOF > /tmp/batch.json
-[
-  {
-    "path": "models.providers.llamacpp",
-    "value": {
-      "api": "openai-completions",
-      "apiKey": "sk-local",
-      "baseUrl": "http://172.20.40.79:9090/v1",
-      "models": [
-        {
-          "id": "Qwen3.5-27B-UD-Q4_K_XL.gguf",
-          "name": "Qwen3.5 27B GGUF",
-          "reasoning": false,
-          "input": ["text"],
-          "cost": {"input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0},
-          "contextWindow": 131072,
-          "maxTokens": 8192
-        }
-      ]
-    }
-  },
-  {
-    "path": "agents.defaults.model.primary",
-    "value": "llamacpp/Qwen3.5-27B-UD-Q4_K_XL.gguf"
-  }
-]
-EOF
+### ⚠️ Note
 
-  openclaw config set --batch-file /tmp/batch.json
-  '
-```
+These steps are intended for advanced users.
+Future versions aim to simplify access and remove the need for manual port forwarding.
 
-### Channels
+---
 
-#### Feishu
+## 🧩 What You Get
 
-Set up the channel:
-```bash
-ctr -n default run --rm -t --net-host \
-  --env OPENCLAW_STATE_DIR=/home/node/state \
-  --mount type=bind,src=/root/openclaw/state,dst=/home/node/state,options=rbind:rw \
-  --mount type=bind,src=/root/openclaw/workspace,dst=/home/node/workspace,options=rbind:rw \
-  ghcr.io/openclaw/openclaw:latest init \
-  /bin/sh -c '
-  set -e
-  openclaw config set channels.feishu.enabled true --json
-  openclaw config set channels.feishu.defaultAccount "main"
-  openclaw config set channels.feishu.dmPolicy "pairing"
-  openclaw config set channels.feishu.accounts.main.appId ""
-  openclaw config set channels.feishu.accounts.main.appSecret ""
-  openclaw config set channels.feishu.accounts.main.botName ""
-  '
-```
+* A fully packaged OpenClaw runtime
+* A secure execution environment based on Firecracker
+* A clean separation between host system and agent activity
+* A ready-to-use setup for running AI agents locally
 
-Approve the pairing request sent by the Feishu bot:
-```bash
-ctr -n default run --rm -t --net-host \
-  --env OPENCLAW_STATE_DIR=/home/node/state \
-  --mount type=bind,src=/root/openclaw/state,dst=/home/node/state,options=rbind:rw \
-  --mount type=bind,src=/root/openclaw/workspace,dst=/home/node/workspace,options=rbind:rw \
-  ghcr.io/openclaw/openclaw:latest init \
-  /bin/sh -c '
-  openclaw pairing approve feishu <CODE>
-  '
-```
+---
 
-### Tools and Plugins
+## ⚠️ Current Limitation
 
-#### Cron
+* The interactive OpenClaw onboarding flow is not fully usable
+  (keyboard input is currently not working during onboarding)
 
-Add a cron job:
-```bash
-openclaw cron add \
-  --name "data_pipeline" \
-  --every 1h \
-  --message "Run the data_pipeline skill to process new input data." \
-  --session isolated \
-  --timeout-seconds 3600 \
-  --announce \
-  --channel feishu \
-  --to "USER_ID"
-```
+---
 
-#### Plugins
+## 📦 Releases
 
-Place custom plugins in the `extensions` directory, then set permissions:
-```bash
-chmod 755 extensions
-find extensions -type d -exec chmod 755 {} \;
-find extensions -type f -exec chmod 644 {} \;
-find extensions -name "*.py" -exec chmod 755 {} \;
-```
+This repository contains only release artifacts:
 
-Then copy `extensions` into the root filesystem:
-```bash
-mkdir /tmp/rootfs
-sudo mount ./vm/rootfs.ext4 /tmp/rootfs/
-sudo cp -r extensions /tmp/rootfs/root/openclaw/state
-sudo chown -R 1000:1000 /tmp/rootfs/root/openclaw/state/extensions
-sudo umount /tmp/rootfs
-```
+* Prebuilt binaries
+* Packaged runtimes
+* `.run` installers
 
-### Reincarnation / State Migration
+All artifacts are automatically generated from the main repository to ensure consistency and reproducibility.
 
-The soul of OpenClaw is stored under `/root/openclaw`. When upgrading the body, you can transfer the soul from the old body to the new body and continue its life.
-```bash
-mkdir /tmp/rootfs_prev /tmp/rootfs
-mount /path/to/old/rootfs.ext4 /tmp/rootfs_prev
-mount /path/to/new/rootfs.ext4 /tmp/rootfs
-sudo rsync -av /tmp/rootfs_prev/root/openclaw/ /tmp/rootfs/root/openclaw/
-sudo rm /tmp/rootfs/root/openclaw/state/.initialized
-umount /tmp/rootfs_prev
-umount /tmp/rootfs
-```
+---
+
+## 📌 Notes
+
+ConfineClaw focuses on **safe execution and ease of use**.
+
+For advanced configuration (models, providers, plugins, etc.),
+refer to the upstream OpenClaw project.
+
+---
+
+## 🔥 One-Line Summary
+
+> **ConfineClaw = OpenClaw, but sandboxed, packaged, and ready to run.**
