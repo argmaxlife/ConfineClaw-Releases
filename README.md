@@ -51,13 +51,20 @@ You are now inside a Firecracker VM running OpenClaw in an isolated environment.
 
 After initialization, ConfineClaw runs OpenClaw inside a Firecracker VM.
 
-#### Option 1 (Recommended for advanced users)
+#### Option 1 (Recommended)
 
-Enter the OpenClaw container:
+Use the default desktop workflow to start and access ConfineClaw.
+
+#### Option 2 (Advanced Users)
+
+If you prefer to configure the environment manually, you can first access the Firecracker VM, then enter the OpenClaw container:
 
 ```bash
-ctr -n default task exec -t --exec-id setup gateway /bin/bash
+ssh root@172.16.0.2
+ctr -n default task exec -t --exec-id configure gateway /bin/bash
 ```
+
+This method allows advanced users to directly access and configure the OpenClaw environment inside the container.
 
 ---
 
@@ -92,13 +99,6 @@ Future versions aim to simplify access and remove the need for manual port forwa
 * A secure execution environment based on Firecracker
 * A clean separation between host system and agent activity
 * A ready-to-use setup for running AI agents locally
-
----
-
-## ⚠️ Current Limitation
-
-* The interactive OpenClaw onboarding flow is not fully usable
-  (keyboard input is currently not working during onboarding)
 
 ---
 
